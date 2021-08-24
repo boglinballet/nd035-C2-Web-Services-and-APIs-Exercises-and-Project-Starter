@@ -4,6 +4,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,6 +22,7 @@ import com.udacity.vehicles.domain.car.Details;
 import com.udacity.vehicles.domain.manufacturer.Manufacturer;
 import com.udacity.vehicles.service.CarService;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,6 +60,10 @@ public class CarControllerTest {
 
     @MockBean
     private MapsClient mapsClient;
+
+    // My tests were not passing due to different content types being returned
+    // I found this solution in the forum https://knowledge.udacity.com/questions/310959
+    private MediaType myContentType = new MediaType("application", "hal+json", Charset.forName("UTF-8"));
 
     /**
      * Creates pre-requisites for testing, such as an example car.
@@ -97,6 +104,19 @@ public class CarControllerTest {
          *   below (the vehicle will be the first in the list).
          */
 
+        Car car = getCar();
+
+        mvc.perform(
+                post(new URI("/cars"))
+                        .content(json.write(car).getJson())
+                        .contentType(MediaType.APPLICATION_JSON_UTF8)
+                        .accept(MediaType.APPLICATION_JSON_UTF8));
+
+        mvc.perform(get("/cars/"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(myContentType));
+
+        verify(carService, times(1)).list();
     }
 
     /**
@@ -109,6 +129,19 @@ public class CarControllerTest {
          * TODO: Add a test to check that the `get` method works by calling
          *   a vehicle by ID. This should utilize the car from `getCar()` below.
          */
+
+        Car car = getCar();
+
+        mvc.perform(
+                post(new URI("/cars"))
+                        .content(json.write(car).getJson())
+                        .contentType(MediaType.APPLICATION_JSON_UTF8)
+                        .accept(MediaType.APPLICATION_JSON_UTF8));
+
+        mvc.perform(
+                get(new URI("/cars/1")))
+                    .andExpect(status().isOk());
+
     }
 
     /**
@@ -122,6 +155,18 @@ public class CarControllerTest {
          *   when the `delete` method is called from the Car Controller. This
          *   should utilize the car from `getCar()` below.
          */
+
+        Car car = getCar();
+
+        mvc.perform(
+                post(new URI("/cars"))
+                        .content(json.write(car).getJson())
+                        .contentType(MediaType.APPLICATION_JSON_UTF8)
+                        .accept(MediaType.APPLICATION_JSON_UTF8));
+
+        mvc.perform(
+                        delete(new URI("/cars/1")))
+                .andExpect(status().isNoContent());
     }
 
     /**
@@ -132,9 +177,9 @@ public class CarControllerTest {
         Car car = new Car();
         car.setLocation(new Location(40.730610, -73.935242));
         Details details = new Details();
-        Manufacturer manufacturer = new Manufacturer(101, "Chevrolet");
+        Manufacturer manufacturer = new Manufacturer(101, "Volkswagen");
         details.setManufacturer(manufacturer);
-        details.setModel("Impala");
+        details.setModel("Jetta");
         details.setMileage(32280);
         details.setExternalColor("white");
         details.setBody("sedan");
